@@ -1,12 +1,22 @@
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import com.typesafe.sbt.jse.JsEngineImport.JsEngineKeys
 import com.typesafe.sbt.web.Import.WebKeys._
 import com.typesafe.sbt.web.SbtWeb.autoImport._
 import com.typesafe.sbt.web.incremental._
 import com.typesafe.sbt.web._
 import sbt.Keys._
 import sbt._
+import com.typesafe.sbt.jse.SbtJsTask
+import sbt._
+import sbt.Keys._
+import com.typesafe.sbt.web.{PathMapping, SbtWeb}
+import spray.json._
+import com.typesafe.sbt.jse.{SbtJsEngine, SbtJsTask}
+
+import scala.concurrent.duration.Duration
+
 
 // from https://github.com/irundaia/sbt-sassify
 object SbtDemoPlugin extends AutoPlugin {
@@ -24,6 +34,11 @@ object SbtDemoPlugin extends AutoPlugin {
   }
 
   import autoImport.MyKeys._
+  import SbtJsTask.autoImport.JsTaskKeys._
+  import SbtWeb.autoImport._
+  import WebKeys._
+  import SbtJsEngine.autoImport.JsEngineKeys._
+  import autoImport._
 
   override lazy val buildSettings = Seq(
     assetRootURL := "/assets/",
@@ -38,6 +53,40 @@ object SbtDemoPlugin extends AutoPlugin {
     resourceManaged in myTask in Assets := webTarget.value / "jssss" / "main",
     resourceGenerators in Assets += myTask in Assets,
 
+    // SbtJsTask.executeJs()
+
+    //val command: Option[File] =
+
+    myTask in Assets := Def.task {
+
+      val log = streams.value.log
+
+      val cal = Calendar.getInstance
+      val sdf = new SimpleDateFormat("HH:mm:ss")
+      val now = sdf.format(cal.getTime)
+
+      log.info(s"$now ---------------------------")
+      log.info(s"$now -----  running    ---------")
+      log.info(s"$now ---------------------------")
+
+      SbtJsTask.executeJs(
+        state = state.value,
+        engineType = JsEngineKeys.EngineType.Node,
+        command = None,
+        nodeModules = (nodeModules in Plugin).value.map(_.getCanonicalPath),
+        shellSource = baseDirectory.value / "project" / "myscript.js",
+        args = Seq("arg1", "arg2"),
+        timeout = Duration(30, "seconds")
+      )
+
+      log.info(s"$now ---------------------------")
+      log.info(s"$now -----  end of running -----")
+      log.info(s"$now ---------------------------")
+
+      Seq.empty[sbt.File]
+    }.value
+
+    /*
     myTask in Assets := Def.task {
 
       val log = streams.value.log
@@ -76,6 +125,7 @@ object SbtDemoPlugin extends AutoPlugin {
       // Return the dependencies
       (results._1 ++ results._2.toSet).toSeq
     }.dependsOn(WebKeys.webModules in Assets).value
+	*/
   )
 
   override def projectSettings: Seq[Setting[_]] = inConfig(Assets)(baseSbtDemoSettings)
